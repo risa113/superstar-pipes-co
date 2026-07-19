@@ -106,34 +106,29 @@ export default function Hero() {
             </p>
 
             {/* CTA Buttons */}
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '1rem',
-              marginTop: '1rem'
-            }}>
-              <button onClick={() => handleScrollTo('products')} className="btn btn-primary" style={{ fontSize: '1.05rem', padding: '1rem 2rem' }}>
+            <div className="hero-actions">
+              <button onClick={() => handleScrollTo('products')} className="btn btn-primary">
                 View Catalog
                 <ArrowRight size={18} />
               </button>
-              <button onClick={() => handleScrollTo('contact')} className="btn btn-outline" style={{ fontSize: '1.05rem', padding: '1rem 2rem', color: '#ffffff', borderColor: '#ffffff' }}>
+              <button onClick={() => handleScrollTo('contact')} className="btn btn-outline">
                 Send Inquiry
               </button>
             </div>
 
             {/* Quick Metrics Bar */}
-            <div className="hero-metrics">
-              <div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white' }}>100%</div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>High Quality Materials</div>
+            <div className="hero-stats">
+              <div className="hero-stat">
+                <h3>100%</h3>
+                <p>High Quality Materials</p>
               </div>
-              <div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-accent)' }}>PAN</div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>India Logistics network</div>
+              <div className="hero-stat">
+                <h3 style={{ color: 'var(--color-accent)' }}>PAN</h3>
+                <p>India Logistics network</p>
               </div>
-              <div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white' }}>SIPCOT</div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>Gangaikondan Facility</div>
+              <div className="hero-stat">
+                <h3>SIPCOT</h3>
+                <p>Gangaikondan Facility</p>
               </div>
             </div>
           </div>

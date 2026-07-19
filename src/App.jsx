@@ -63,7 +63,7 @@ function AppContent() {
         href={floatingWaUrl}
         target="_blank" 
         rel="noopener noreferrer" 
-        className="whatsapp-widget"
+        className="whatsapp-widget whatsapp-floating"
         title="Chat with us on WhatsApp"
       >
         <MessageCircle size={32} />
