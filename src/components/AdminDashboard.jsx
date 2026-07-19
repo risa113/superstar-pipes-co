@@ -413,7 +413,7 @@ export default function AdminDashboard() {
                 <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>⚠️ Authentication Error:</div>
                 <div>{loginError}</div>
                 <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: '#94a3b8', borderTop: '1px solid rgba(239, 68, 68, 0.2)', paddingTop: '0.5rem' }}>
-                  <b>How to resolve:</b> Go to your Supabase Project &gt; <b>Authentication</b> tab, click <b>Add User</b> &gt; <b>Create User</b>, and add the email <b>mohamedthariq113@gmail.com</b> with password <b>superstar@123</b>.
+                  <b>How to resolve:</b> Go to your Supabase Project &gt; <b>Authentication</b> tab, click <b>Add User</b> &gt; <b>Create User</b>, and add the email <b>superstarpipesandco@gmail.com</b> with password <b>superstar@123</b>.
                 </div>
               </div>
             )}

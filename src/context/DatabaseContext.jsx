@@ -474,7 +474,7 @@ export const DatabaseProvider = ({ children }) => {
       if (useCloudDb) {
         try {
           const { data, error } = await supabase.auth.signInWithPassword({
-            email: 'mohamedthariq113@gmail.com',
+            email: 'superstarpipesandco@gmail.com',
             password: password
           });
           if (error) throw error;
