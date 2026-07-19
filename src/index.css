@@ -424,6 +424,26 @@ header {
   box-shadow: var(--shadow-xl);
   position: relative;
   animation: modal-enter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  padding: 2.5rem;
+}
+
+@media (max-width: 640px) {
+  .modal-content {
+    padding: 1.5rem 1.25rem;
+    max-height: 95vh;
+  }
+}
+
+.admin-login-card {
+  max-width: 450px;
+  width: 100%;
+  padding: 3rem;
+}
+
+@media (max-width: 480px) {
+  .admin-login-card {
+    padding: 2rem 1.25rem;
+  }
 }
 
 .modal-close {

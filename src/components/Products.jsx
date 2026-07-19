@@ -186,7 +186,7 @@ export default function Products({ onSelectProductForInquiry }) {
         {/* Specifications Modal Overlay */}
         {selectedProduct && (
           <div className="modal-overlay" onClick={() => setSelectedProduct(null)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ padding: '2.5rem' }}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <button className="modal-close" onClick={() => setSelectedProduct(null)}>✕</button>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>

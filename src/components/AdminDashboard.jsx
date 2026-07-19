@@ -254,10 +254,7 @@ export default function AdminDashboard() {
         color: 'white',
         padding: '1.5rem'
       }}>
-        <div className="glass-card" style={{
-          maxWidth: '450px',
-          width: '100%',
-          padding: '3rem',
+        <div className="glass-card admin-login-card" style={{
           border: '1px solid rgba(255,255,255,0.08)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
           textAlign: 'center'
@@ -1025,7 +1022,7 @@ export default function AdminDashboard() {
         {/* ========================================================================= */}
         {showProductModal && (
           <div className="modal-overlay" style={{ color: 'var(--color-text-dark)' }}>
-            <div className="modal-content" style={{ maxWidth: '650px', padding: '2.5rem' }}>
+            <div className="modal-content" style={{ maxWidth: '650px' }}>
               <button className="modal-close" onClick={() => setShowProductModal(false)}>✕</button>
               
               <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.5rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
