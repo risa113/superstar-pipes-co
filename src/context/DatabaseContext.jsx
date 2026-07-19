@@ -146,25 +146,17 @@ export const DatabaseProvider = ({ children }) => {
     try {
       if (useCloudDb) {
         // Fetch Products
-        let { data: prodData, error: prodErr } = await supabase
+        const { data: prodData, error: prodErr } = await supabase
           .from('products')
           .select('*')
           .order('created_at', { ascending: false });
         if (prodErr) throw prodErr;
-
-        // Auto-seed default products if empty
-        if (!prodData || prodData.length === 0) {
-          const { data: seededData, error: seedErr } = await supabase
-            .from('products')
-            .insert(defaultProducts)
-            .select();
-          if (!seedErr && seededData) {
-            prodData = seededData;
-          } else if (seedErr) {
-            console.error('Auto-seeding products failed:', seedErr);
-          }
+        
+        if (prodData && prodData.length > 0) {
+          setProducts(prodData);
+        } else {
+          setProducts(defaultProducts);
         }
-        setProducts(prodData || []);
 
         // Fetch Inquiries (if authenticated, otherwise keep empty until logged in)
         const { data: session } = await supabase.auth.getSession();
@@ -349,13 +341,12 @@ export const DatabaseProvider = ({ children }) => {
     setLoading(true);
     try {
       const publicImageUrl = await uploadImage(updatedProduct.image);
-      const updated = { ...updatedProduct, image: publicImageUrl };
+      const updated = { ...updatedProduct, id, image: publicImageUrl };
 
       if (useCloudDb) {
         const { error } = await supabase
           .from('products')
-          .update(updated)
-          .eq('id', id);
+          .upsert(updated);
         if (error) throw error;
       } else {
         const mapped = products.map(p => p.id === id ? { ...p, ...updated } : p);
