@@ -57,12 +57,7 @@ export default function Hero() {
       }}></div>
 
       <div className="container" style={{ position: 'relative', zIndex: 10 }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '3rem',
-          alignItems: 'center'
-        }}>
+        <div className="hero-grid">
           {/* Text Area */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* Dynamic Badge */}
@@ -127,14 +122,7 @@ export default function Hero() {
             </div>
 
             {/* Quick Metrics Bar */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '1.5rem',
-              marginTop: '2rem',
-              paddingTop: '2rem',
-              borderTop: '1px solid rgba(255, 255, 255, 0.08)'
-            }}>
+            <div className="hero-metrics">
               <div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white' }}>100%</div>
                 <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>High Quality Materials</div>
