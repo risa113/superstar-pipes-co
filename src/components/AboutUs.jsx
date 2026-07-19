@@ -26,7 +26,7 @@ export default function AboutUs() {
               backgroundColor: '#f1f5f9'
             }}>
               <img 
-                src="/factory.jpg" 
+                src={`${import.meta.env.BASE_URL}factory.jpg`} 
                 alt="Super Star Pipes & Co Factory - Gangaikondan SIPCOT" 
                 style={{ 
                   width: '100%', 
