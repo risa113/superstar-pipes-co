@@ -52,10 +52,10 @@ const defaultCompanyInfo = {
 
 const defaultProducts = [
   {
-    id: "1",
+    id: "0a34b22c-7b44-4638-89c0-67a6e1694db0",
     name: "Suction Hose",
     description: "Heavy-duty flexible PVC suction hose designed for industrial suction, dewatering, and general fluid transfer. Specially engineered to resist crushing, vacuum-collapse, and mild chemical wear.",
-    price: "180",
+    price: 180,
     unit: "Meter",
     image: defaultImages.suctionHose,
     specs: {
@@ -68,10 +68,10 @@ const defaultProducts = [
     category: "Suction"
   },
   {
-    id: "2",
+    id: "9b80ce82-dbbb-4a57-bb06-bd56cc22ea8d",
     name: "Braided Hose",
     description: "Multi-layered high-pressure braided hose reinforced with high-tensile polyester yarn. Ideal for air compressor lines, water injection, pneumatic systems, and spraying light chemicals.",
-    price: "95",
+    price: 95,
     unit: "Meter",
     image: import.meta.env.BASE_URL + 'wire_reinforced.jpg',
     specs: {
@@ -84,10 +84,10 @@ const defaultProducts = [
     category: "Braided"
   },
   {
-    id: "3",
+    id: "64bf0178-5db0-4965-b1a7-58b29df42b03",
     name: "Industrial Hose",
     description: "Premium industrial grade hose suitable for heavy-duty discharge, high abrasion fluid lines, chemical conveying, and oil transport. Outfitted with chemical-resistant liners.",
-    price: "240",
+    price: 240,
     unit: "Meter",
     image: defaultImages.industrialHose,
     specs: {
@@ -100,10 +100,10 @@ const defaultProducts = [
     category: "Industrial"
   },
   {
-    id: "4",
+    id: "0d45ca14-fb5e-4efb-8664-df8d9514757e",
     name: "PVC Thunder Hose Pipe",
     description: "High-grade premium spiral-reinforced thunder suction pipe. Excellent flexibility, highly resistant to external impact and harsh weather. Specifically designed for extreme suction and delivery requirements like mining, sand-gravel, and slurry transport.",
-    price: "285",
+    price: 285,
     unit: "Meter",
     image: import.meta.env.BASE_URL + 'thunder_hose.jpg',
     specs: {
@@ -116,10 +116,10 @@ const defaultProducts = [
     category: "Thunder"
   },
   {
-    id: "5",
+    id: "7cbb72c1-d411-4770-8b43-26a978f8cb0f",
     name: "PVC Steel Wire Reinforced Hose Pipe",
     description: "Highly flexible, transparent PVC hose embedded with a spiral high-strength steel wire. Ideal for high vacuum and pressure applications where visual product flow verification is essential. Handles liquids, food-grade items, chemicals, and powders.",
-    price: "210",
+    price: 210,
     unit: "Meter",
     image: import.meta.env.BASE_URL + 'wire_reinforced.jpg',
     specs: {
@@ -146,11 +146,24 @@ export const DatabaseProvider = ({ children }) => {
     try {
       if (useCloudDb) {
         // Fetch Products
-        const { data: prodData, error: prodErr } = await supabase
+        let { data: prodData, error: prodErr } = await supabase
           .from('products')
           .select('*')
           .order('created_at', { ascending: false });
         if (prodErr) throw prodErr;
+
+        // Auto-seed default products if empty
+        if (!prodData || prodData.length === 0) {
+          const { data: seededData, error: seedErr } = await supabase
+            .from('products')
+            .insert(defaultProducts)
+            .select();
+          if (!seedErr && seededData) {
+            prodData = seededData;
+          } else if (seedErr) {
+            console.error('Auto-seeding products failed:', seedErr);
+          }
+        }
         setProducts(prodData || []);
 
         // Fetch Inquiries (if authenticated, otherwise keep empty until logged in)
