@@ -60,7 +60,7 @@ const defaultProducts = [
     description: "Multi-layered high-pressure braided hose reinforced with high-tensile polyester yarn. Ideal for air compressor lines, water injection, pneumatic systems, and spraying light chemicals.",
     price: "95",
     unit: "Meter",
-    image: defaultImages.braidedHose,
+    image: import.meta.env.BASE_URL + 'wire_reinforced.jpg',
     specs: {
       "Material": "PVC inner/outer tubes with Polyester braiding",
       "Sizes Available": "1/4\" to 2\" Internal Diameter",
@@ -92,7 +92,7 @@ const defaultProducts = [
     description: "High-grade premium spiral-reinforced thunder suction pipe. Excellent flexibility, highly resistant to external impact and harsh weather. Specifically designed for extreme suction and delivery requirements like mining, sand-gravel, and slurry transport.",
     price: "285",
     unit: "Meter",
-    image: defaultImages.thunderHose,
+    image: import.meta.env.BASE_URL + 'thunder_hose.jpg',
     specs: {
       "Material": "Impact-resistant rigid PVC spiral helix inside soft PVC",
       "Sizes Available": "1.5\" to 8\" Internal Diameter",
@@ -108,7 +108,7 @@ const defaultProducts = [
     description: "Highly flexible, transparent PVC hose embedded with a spiral high-strength steel wire. Ideal for high vacuum and pressure applications where visual product flow verification is essential. Handles liquids, food-grade items, chemicals, and powders.",
     price: "210",
     unit: "Meter",
-    image: defaultImages.wireHose,
+    image: import.meta.env.BASE_URL + 'wire_reinforced.jpg',
     specs: {
       "Material": "Transparent PVC with Spring Steel Wire Helix",
       "Sizes Available": "1/2\" to 4\" Internal Diameter",
