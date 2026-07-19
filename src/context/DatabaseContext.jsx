@@ -471,7 +471,7 @@ export const DatabaseProvider = ({ children }) => {
         // Authenticate via Supabase Auth
         // Using standard admin email mapped to passcode input
         const { data, error } = await supabase.auth.signInWithPassword({
-          email: 'superstarpipesandco@gmail.com',
+          email: 'mohamedthariq113@gmail.com',
           password: password
         });
         if (error) throw error;
