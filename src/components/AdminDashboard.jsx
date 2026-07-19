@@ -7,21 +7,25 @@ import { useDatabase } from '../context/DatabaseContext';
 
 export default function AdminDashboard() {
   const {
-    companyInfo, products, inquiries, isLoggedIn, login, logout, changePassword,
+    loading: dbLoading, companyInfo, products, inquiries, isLoggedIn, login, logout, changePassword,
     addProduct, updateProduct, deleteProduct, deleteInquiry, markInquiryRead,
-    updateCompanyInfo, resetDatabase, exportDatabase, importDatabase
+    updateCompanyInfo, resetDatabase
   } = useDatabase();
 
   const [activeTab, setActiveTab] = useState('overview');
   
-  // Login State
+  // Login UI State
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
 
   // Product Modals & Forms State
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null); // null means adding new product
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalSuccess, setModalSuccess] = useState(false);
+  const [modalError, setModalError] = useState('');
   
   // Product Form Fields
   const [prodName, setProdName] = useState('');
@@ -44,23 +48,37 @@ export default function AdminDashboard() {
   const [compAboutText, setCompAboutText] = useState(companyInfo.aboutText);
   const [compMapEmbed, setCompMapEmbed] = useState(companyInfo.mapEmbedUrl);
   const [compMapShare, setCompMapShare] = useState(companyInfo.mapShareLink);
+  
+  const [infoLoading, setInfoLoading] = useState(false);
+  const [infoError, setInfoError] = useState('');
   const [contentSaved, setContentSaved] = useState(false);
 
-  // Settings State
+  // Settings UI State
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
+  const [passLoading, setPassLoading] = useState(false);
   const [passMessage, setPassMessage] = useState({ text: '', type: '' });
-  const [importFile, setImportFile] = useState(null);
+  
+  const [resetLoading, setResetLoading] = useState(false);
+  const [inquiryActionId, setInquiryActionId] = useState(null); // tracking row loading
 
   // Handlers
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const success = login(passwordInput);
-    if (success) {
-      setLoginError('');
-      setPasswordInput('');
-    } else {
-      setLoginError('Invalid Administrator Password');
+    setLoginLoading(true);
+    setLoginError('');
+    try {
+      const success = await login(passwordInput);
+      if (success) {
+        setPasswordInput('');
+        setLoginError('');
+      } else {
+        setLoginError('Invalid Administrator Passcode');
+      }
+    } catch (err) {
+      setLoginError(err.message || 'Failed to authenticate. Check internet or project keys.');
+    } finally {
+      setLoginLoading(false);
     }
   };
 
@@ -105,6 +123,8 @@ export default function AdminDashboard() {
       { key: 'Sizes Available', val: '1" to 4"' },
       { key: 'Working Pressure', val: '8 Bar' }
     ]);
+    setModalError('');
+    setModalSuccess(false);
     setShowProductModal(true);
   };
 
@@ -123,15 +143,21 @@ export default function AdminDashboard() {
       : [{ key: '', val: '' }];
     setProdSpecs(specsArray);
     
+    setModalError('');
+    setModalSuccess(false);
     setShowProductModal(true);
   };
 
-  const handleProductSubmit = (e) => {
+  const handleProductSubmit = async (e) => {
     e.preventDefault();
     if (!prodName || !prodPrice || !prodCategory) {
       alert('Product Name, Price, and Category are required.');
       return;
     }
+
+    setModalLoading(true);
+    setModalError('');
+    setModalSuccess(false);
 
     // Convert specs array back to object
     const specsObj = {};
@@ -144,44 +170,73 @@ export default function AdminDashboard() {
     const productData = {
       name: prodName,
       description: prodDesc,
-      price: prodPrice,
+      price: parseFloat(prodPrice),
       unit: prodUnit,
       category: prodCategory,
-      image: prodImage || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23cbd5e1"/><text x="50" y="55" font-family="sans-serif" font-size="10" text-anchor="middle" fill="%2364748b">No Image</text></svg>',
+      image: prodImage || '',
       specs: specsObj
     };
 
-    if (editingProductId) {
-      updateProduct(editingProductId, productData);
-    } else {
-      addProduct(productData);
+    try {
+      if (editingProductId) {
+        await updateProduct(editingProductId, productData);
+      } else {
+        await addProduct(productData);
+      }
+      setModalSuccess(true);
+      setTimeout(() => {
+        setShowProductModal(false);
+        setModalSuccess(false);
+      }, 1500);
+    } catch (err) {
+      setModalError(err.message || 'Failed to save product in cloud database.');
+    } finally {
+      setModalLoading(false);
     }
+  };
 
-    setShowProductModal(false);
+  // Delete product wrapper
+  const handleDeleteProduct = async (id, name) => {
+    if (confirm(`Are you sure you want to delete product "${name}"?`)) {
+      try {
+        await deleteProduct(id);
+      } catch (err) {
+        alert('Failed to delete product: ' + err.message);
+      }
+    }
   };
 
   // Company Details Form submit
-  const handleCompanySubmit = (e) => {
+  const handleCompanySubmit = async (e) => {
     e.preventDefault();
-    updateCompanyInfo({
-      name: compName,
-      tagline: compTagline,
-      partner: compPartner,
-      address: compAddress,
-      gstin: compGstin,
-      phone: compPhone,
-      whatsapp: compWhatsapp,
-      email: compEmail,
-      aboutText: compAboutText,
-      mapEmbedUrl: compMapEmbed,
-      mapShareLink: compMapShare
-    });
-    setContentSaved(true);
-    setTimeout(() => setContentSaved(false), 3000);
+    setInfoLoading(true);
+    setInfoError('');
+    setContentSaved(false);
+    try {
+      await updateCompanyInfo({
+        name: compName,
+        tagline: compTagline,
+        partner: compPartner,
+        address: compAddress,
+        gstin: compGstin,
+        phone: compPhone,
+        whatsapp: compWhatsapp,
+        email: compEmail,
+        aboutText: compAboutText,
+        mapEmbedUrl: compMapEmbed,
+        mapShareLink: compMapShare
+      });
+      setContentSaved(true);
+      setTimeout(() => setContentSaved(false), 3000);
+    } catch (err) {
+      setInfoError(err.message || 'Failed to update company info.');
+    } finally {
+      setInfoLoading(false);
+    }
   };
 
   // Password update
-  const handlePasswordChange = (e) => {
+  const handlePasswordChange = async (e) => {
     e.preventDefault();
     if (newPass !== confirmPass) {
       setPassMessage({ text: 'Passwords do not match', type: 'error' });
@@ -191,55 +246,76 @@ export default function AdminDashboard() {
       setPassMessage({ text: 'Password must be at least 5 characters long', type: 'error' });
       return;
     }
-    changePassword(newPass);
-    setNewPass('');
-    setConfirmPass('');
-    setPassMessage({ text: 'Password updated successfully!', type: 'success' });
-    setTimeout(() => setPassMessage({ text: '', type: '' }), 3000);
-  };
-
-  // Database Backup/Restore Actions
-  const handleExport = () => {
-    const dataStr = exportDatabase();
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = 'superstar_database_backup.json';
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-  };
-
-  const handleImport = (e) => {
-    e.preventDefault();
-    if (!importFile) {
-      alert('Please select a JSON file first');
-      return;
+    setPassLoading(true);
+    setPassMessage({ text: '', type: '' });
+    try {
+      await changePassword(newPass);
+      setNewPass('');
+      setConfirmPass('');
+      setPassMessage({ text: 'Password updated successfully!', type: 'success' });
+      setTimeout(() => setPassMessage({ text: '', type: '' }), 3000);
+    } catch (err) {
+      setPassMessage({ text: err.message || 'Failed to update password.', type: 'error' });
+    } finally {
+      setPassLoading(false);
     }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const success = importDatabase(event.target.result);
-      if (success) {
-        alert('Database restored successfully! Refreshing details.');
-        setImportFile(null);
-        window.location.reload();
-      } else {
-        alert('Invalid backup file. Please upload a valid JSON backup file.');
+  };
+
+  // Wipe database
+  const handleWipeDatabase = async () => {
+    if (confirm('CRITICAL: Wiping database will restore default product lines, clear inquiries, and reset site texts. Proceed?')) {
+      setResetLoading(true);
+      try {
+        await resetDatabase();
+        alert('Database has been reset to defaults.');
+      } catch (err) {
+        alert('Failed to reset database: ' + err.message);
+      } finally {
+        setResetLoading(false);
       }
-    };
-    reader.readAsText(importFile);
+    }
+  };
+
+  // Mark inquiry read helper
+  const handleMarkInquiryRead = async (id) => {
+    setInquiryActionId(id);
+    try {
+      await markInquiryRead(id);
+    } catch (err) {
+      alert('Error updating inquiry: ' + err.message);
+    } finally {
+      setInquiryActionId(null);
+    }
+  };
+
+  // Delete inquiry helper
+  const handleDeleteInquiry = async (id) => {
+    if (confirm('Delete inquiry record?')) {
+      setInquiryActionId(id);
+      try {
+        await deleteInquiry(id);
+      } catch (err) {
+        alert('Error deleting inquiry: ' + err.message);
+      } finally {
+        setInquiryActionId(null);
+      }
+    }
   };
 
   // Inquiry WhatsApp reply helper
-  const handleInquiryWhatsAppReply = (inq) => {
-    const cleanNum = inq.phone.replace(/[^0-9]/g, '');
-    const waPhone = cleanNum.startsWith('91') ? cleanNum : `91${cleanNum}`;
-    const textMsg = `Hello ${inq.name}, this is Super Star Pipes & Co. We received your inquiry regarding our product: *${inq.product}* (${inq.quantity}). We are processing your request. Please let us know your convenient time for a call. Thank you!`;
-    const redirectUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(textMsg)}`;
-    
-    markInquiryRead(inq.id);
-    window.open(redirectUrl, '_blank');
+  const handleInquiryWhatsAppReply = async (inq) => {
+    setInquiryActionId(inq.id);
+    try {
+      const cleanNum = inq.phone.replace(/[^0-9]/g, '');
+      const waPhone = cleanNum.startsWith('91') ? cleanNum : `91${cleanNum}`;
+      const textMsg = `Hello ${inq.name}, this is Super Star Pipes & Co. We received your inquiry regarding our product: *${inq.product}* (${inq.quantity}). We are processing your request. Please let us know your convenient time for a call. Thank you!`;
+      const redirectUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(textMsg)}`;
+      
+      await markInquiryRead(inq.id);
+      window.open(redirectUrl, '_blank');
+    } finally {
+      setInquiryActionId(null);
+    }
   };
 
   /* RENDER LOGIN VIEW IF NOT LOGGED IN */
@@ -297,6 +373,7 @@ export default function AdminDashboard() {
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
                   placeholder="••••••••••••"
+                  disabled={loginLoading}
                   required
                 />
                 <button
@@ -335,8 +412,8 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.9rem' }}>
-              Authenticate Control Panel
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.9rem' }} disabled={loginLoading}>
+              {loginLoading ? 'Authenticating...' : 'Authenticate Control Panel'}
             </button>
           </form>
           
@@ -448,9 +525,15 @@ export default function AdminDashboard() {
           </div>
           
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', background: '#0284c715', border: '1px solid #0284c740', color: 'var(--color-secondary)', padding: '0.3rem 0.75rem', borderRadius: '20px', fontWeight: 600 }}>
-              Live Database Connected
-            </span>
+            {dbLoading ? (
+              <span style={{ fontSize: '0.8rem', background: '#d9770615', border: '1px solid #d9770640', color: 'var(--color-accent)', padding: '0.3rem 0.75rem', borderRadius: '20px', fontWeight: 600 }}>
+                🔄 Connecting...
+              </span>
+            ) : (
+              <span style={{ fontSize: '0.8rem', background: '#10b98115', border: '1px solid #10b98140', color: 'var(--color-success)', padding: '0.3rem 0.75rem', borderRadius: '20px', fontWeight: 600 }}>
+                🟢 Real-time Sync Active
+              </span>
+            )}
           </div>
         </div>
 
@@ -511,7 +594,7 @@ export default function AdminDashboard() {
                           <td style={{ fontWeight: 600 }}>{inq.name}</td>
                           <td>{inq.phone}</td>
                           <td style={{ color: 'var(--color-secondary)' }}>{inq.product}</td>
-                          <td>{new Date(inq.date).toLocaleDateString()}</td>
+                          <td>{new Date(inq.created_at || inq.date).toLocaleDateString()}</td>
                           <td>
                             <span style={{ 
                               padding: '0.2rem 0.5rem', 
@@ -529,8 +612,9 @@ export default function AdminDashboard() {
                               onClick={() => handleInquiryWhatsAppReply(inq)}
                               className="btn btn-primary" 
                               style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}
+                              disabled={inquiryActionId === inq.id}
                             >
-                              <MessageSquare size={12} /> WhatsApp Reply
+                              <MessageSquare size={12} /> Reply
                             </button>
                           </td>
                         </tr>
@@ -559,12 +643,12 @@ export default function AdminDashboard() {
               </div>
 
               <div className="admin-card" style={{ marginBottom: 0 }}>
-                <h4 style={{ color: 'white', marginBottom: '0.75rem', fontWeight: 700 }}>Data Safety</h4>
+                <h4 style={{ color: 'white', marginBottom: '0.75rem', fontWeight: 700 }}>Real-Time Cloud Hosting</h4>
                 <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-                  Export backups of all data stored in local memory. Restore databases via import.
+                  Your database is hosted securely in the cloud. Changes made here reflect immediately to all customers worldwide.
                 </p>
-                <button onClick={handleExport} className="btn btn-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', width: '100%', color: '#fff', borderColor: 'var(--admin-border)' }}>
-                  <Download size={16} /> Download Backup (JSON)
+                <button onClick={() => setActiveTab('settings')} className="btn btn-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', width: '100%', color: '#fff', borderColor: 'var(--admin-border)' }}>
+                  Open Settings Panel
                 </button>
               </div>
             </div>
@@ -600,7 +684,7 @@ export default function AdminDashboard() {
                     <tr key={product.id}>
                       <td>
                         <img 
-                          src={product.image} 
+                          src={product.image || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23cbd5e1"/><text x="50" y="55" font-family="sans-serif" font-size="10" text-anchor="middle" fill="%2364748b">No Image</text></svg>'} 
                           alt={product.name} 
                           style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--admin-border)' }}
                         />
@@ -616,7 +700,7 @@ export default function AdminDashboard() {
                       </td>
                       <td>
                         <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                          {product.specs ? Object.keys(product.specs).length : 0} defined fields
+                          {product.specs ? Object.keys(product.specs).length : 0} specs
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
@@ -630,11 +714,7 @@ export default function AdminDashboard() {
                             <Edit size={14} />
                           </button>
                           <button 
-                            onClick={() => {
-                              if (confirm(`Are you sure you want to delete product "${product.name}"?`)) {
-                                deleteProduct(product.id);
-                              }
-                            }} 
+                            onClick={() => handleDeleteProduct(product.id, product.name)} 
                             className="btn btn-danger" 
                             style={{ padding: '0.4rem', minWidth: '32px' }}
                             title="Delete Product"
@@ -671,7 +751,8 @@ export default function AdminDashboard() {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '1rem',
-                    borderLeft: inq.read ? '1px solid var(--admin-border)' : '4px solid var(--color-accent)'
+                    borderLeft: inq.read ? '1px solid var(--admin-border)' : '4px solid var(--color-accent)',
+                    opacity: inquiryActionId === inq.id ? 0.6 : 1
                   }}>
                     {/* Top Row: Customer details */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -685,28 +766,26 @@ export default function AdminDashboard() {
                           )}
                         </h4>
                         <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem' }}>
-                          Phone: <b>{inq.phone}</b> • Received: {new Date(inq.date).toLocaleString()}
+                          Phone: <b>{inq.phone}</b> • Received: {new Date(inq.created_at || inq.date).toLocaleString()}
                         </div>
                       </div>
                       
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         {!inq.read && (
                           <button 
-                            onClick={() => markInquiryRead(inq.id)}
+                            onClick={() => handleMarkInquiryRead(inq.id)}
                             className="btn btn-outline" 
                             style={{ padding: '0.4rem 0.75rem', fontSize: '0.75rem', color: '#10b981', borderColor: '#10b98130', background: '#10b98105' }}
+                            disabled={inquiryActionId === inq.id}
                           >
                             <Check size={12} /> Mark Read
                           </button>
                         )}
                         <button 
-                          onClick={() => {
-                            if (confirm('Delete inquiry record?')) {
-                              deleteInquiry(inq.id);
-                            }
-                          }}
+                          onClick={() => handleDeleteInquiry(inq.id)}
                           className="btn btn-outline" 
                           style={{ padding: '0.4rem', color: 'var(--color-danger)', borderColor: '#ef444420' }}
+                          disabled={inquiryActionId === inq.id}
                           title="Delete Inquiry"
                         >
                           <Trash2 size={12} />
@@ -748,8 +827,9 @@ export default function AdminDashboard() {
                         onClick={() => handleInquiryWhatsAppReply(inq)}
                         className="btn btn-primary" 
                         style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                        disabled={inquiryActionId === inq.id}
                       >
-                        <MessageSquare size={14} /> Open WhatsApp Chat &amp; Send Reply Template
+                        <MessageSquare size={14} /> Open WhatsApp Chat &amp; Send Reply
                       </button>
                     </div>
                   </div>
@@ -782,6 +862,21 @@ export default function AdminDashboard() {
                 </div>
               )}
 
+              {infoError && (
+                <div style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  color: 'var(--color-danger)',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '8px',
+                  fontSize: '0.9rem',
+                  marginBottom: '1.5rem',
+                  fontWeight: 500
+                }}>
+                  ⚠️ {infoError}
+                </div>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
                 <div className="form-group">
                   <label style={{ color: '#94a3b8' }}>Company Name</label>
@@ -791,6 +886,7 @@ export default function AdminDashboard() {
                     style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--admin-border)', color: 'white' }}
                     value={compName} 
                     onChange={e => setCompName(e.target.value)} 
+                    disabled={infoLoading}
                   />
                 </div>
 
@@ -802,6 +898,7 @@ export default function AdminDashboard() {
                     style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--admin-border)', color: 'white' }}
                     value={compTagline} 
                     onChange={e => setCompTagline(e.target.value)} 
+                    disabled={infoLoading}
                   />
                 </div>
 
@@ -813,6 +910,7 @@ export default function AdminDashboard() {
                     style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--admin-border)', color: 'white' }}
                     value={compPartner} 
                     onChange={e => setCompPartner(e.target.value)} 
+                    disabled={infoLoading}
                   />
                 </div>
 
@@ -824,6 +922,7 @@ export default function AdminDashboard() {
                     style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--admin-border)', color: 'white' }}
                     value={compGstin} 
                     onChange={e => setCompGstin(e.target.value)} 
+                    disabled={infoLoading}
                   />
                 </div>
 
@@ -835,6 +934,7 @@ export default function AdminDashboard() {
                     style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--admin-border)', color: 'white' }}
                     value={compPhone} 
                     onChange={e => setCompPhone(e.target.value)} 
+                    disabled={infoLoading}
                   />
                 </div>
 
@@ -846,6 +946,7 @@ export default function AdminDashboard() {
                     style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--admin-border)', color: 'white' }}
                     value={compWhatsapp} 
                     onChange={e => setCompWhatsapp(e.target.value)} 
+                    disabled={infoLoading}
                   />
                 </div>
 
@@ -857,6 +958,7 @@ export default function AdminDashboard() {
                     style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--admin-border)', color: 'white' }}
                     value={compAddress} 
                     onChange={e => setCompAddress(e.target.value)} 
+                    disabled={infoLoading}
                   />
                 </div>
 
@@ -867,6 +969,7 @@ export default function AdminDashboard() {
                     style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--admin-border)', color: 'white', minHeight: '120px' }}
                     value={compAboutText} 
                     onChange={e => setCompAboutText(e.target.value)}
+                    disabled={infoLoading}
                   ></textarea>
                 </div>
 
@@ -878,6 +981,7 @@ export default function AdminDashboard() {
                     style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--admin-border)', color: 'white' }}
                     value={compMapShare} 
                     onChange={e => setCompMapShare(e.target.value)} 
+                    disabled={infoLoading}
                   />
                 </div>
 
@@ -889,12 +993,13 @@ export default function AdminDashboard() {
                     style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--admin-border)', color: 'white' }}
                     value={compMapEmbed} 
                     onChange={e => setCompMapEmbed(e.target.value)} 
+                    disabled={infoLoading}
                   />
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ marginTop: '2rem', padding: '0.75rem 2rem' }}>
-                Save Content Configurations
+              <button type="submit" className="btn btn-primary" style={{ marginTop: '2rem', padding: '0.75rem 2rem' }} disabled={infoLoading}>
+                {infoLoading ? 'Saving...' : 'Save Content Configurations'}
               </button>
             </form>
           </div>
@@ -934,6 +1039,7 @@ export default function AdminDashboard() {
                     value={newPass} 
                     onChange={e => setNewPass(e.target.value)} 
                     placeholder="New admin passcode"
+                    disabled={passLoading}
                     required
                   />
                 </div>
@@ -946,51 +1052,35 @@ export default function AdminDashboard() {
                     value={confirmPass} 
                     onChange={e => setConfirmPass(e.target.value)} 
                     placeholder="Retype password"
+                    disabled={passLoading}
                     required
                   />
                 </div>
-                <button type="submit" className="btn btn-primary" style={{ padding: '0.5rem 1.25rem', fontSize: '0.9rem' }}>
-                  Update Passcode
+                <button type="submit" className="btn btn-primary" style={{ padding: '0.5rem 1.25rem', fontSize: '0.9rem' }} disabled={passLoading}>
+                  {passLoading ? 'Updating...' : 'Update Passcode'}
                 </button>
               </form>
             </div>
 
-            {/* Backups Export/Import */}
+            {/* Cloud Details */}
             <div className="admin-card" style={{ marginBottom: 0 }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.5rem', color: 'white' }}>Data Import / Export</h3>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: 'white' }}>Cloud Connection Details</h3>
               <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                Export all your customized products, price amounts, address texts, and inquiries into a JSON backup file. Import that file on another computer to transfer the website configuration.
+                This application uses **Supabase** to store database records, manage authentication, and hold product images. If you need to make changes to your database schema, credentials, or view server logs, log into your Supabase Dashboard.
               </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
-                {/* Export Column */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
                 <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1.5rem' }}>
-                  <h4 style={{ color: 'white', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Download size={18} /> Export Database</h4>
-                  <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                    Saves current website state (all listings &amp; messages) directly to a file.
-                  </p>
-                  <button onClick={handleExport} className="btn btn-primary">
-                    Download Backup File
-                  </button>
+                  <h4 style={{ color: 'white', marginBottom: '0.5rem' }}>Database URL</h4>
+                  <code style={{ fontSize: '0.85rem', color: 'var(--color-secondary)', wordBreak: 'break-all' }}>
+                    {supabaseUrl || 'Not Configured'}
+                  </code>
                 </div>
-
-                {/* Import Column */}
                 <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '1.5rem' }}>
-                  <h4 style={{ color: 'white', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Upload size={18} /> Import Database</h4>
-                  <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                    Upload a previously downloaded `.json` database file to overwrite current settings.
+                  <h4 style={{ color: 'white', marginBottom: '0.5rem' }}>Authentication Model</h4>
+                  <p style={{ fontSize: '0.9rem', color: '#cbd5e1' }}>
+                    Standard administrator login mapped dynamically using secure PostgreSQL passwords.
                   </p>
-                  <form onSubmit={handleImport}>
-                    <input 
-                      type="file" 
-                      accept=".json"
-                      onChange={(e) => setImportFile(e.target.files[0])}
-                      style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem' }}
-                    />
-                    <button type="submit" className="btn btn-outline" style={{ display: 'block', color: 'white', borderColor: 'var(--admin-border)' }}>
-                      Import/Restore Database
-                    </button>
-                  </form>
                 </div>
               </div>
             </div>
@@ -999,19 +1089,14 @@ export default function AdminDashboard() {
             <div className="admin-card" style={{ marginBottom: 0, border: '1px solid #ef444450' }}>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--color-danger)' }}>Factory Database Reset</h3>
               <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                Resets the local database storage engine back to the initial default product lines, company addresses, GSTIN numbers, and clears the inquiry list. **WARNING: All custom changes will be lost.**
+                Resets the cloud database storage tables back to the initial default product lines and clears the inquiry list. **WARNING: All custom changes will be overwritten globally.**
               </p>
               <button 
-                onClick={() => {
-                  if (confirm('CRITICAL: Are you sure you want to perform a factory reset? All customized products, prices, address details and inbox inquiries will be permanently deleted.')) {
-                    resetDatabase();
-                    alert('Database has been reset to defaults. Refreshing...');
-                    window.location.reload();
-                  }
-                }}
+                onClick={handleWipeDatabase}
                 className="btn btn-danger"
+                disabled={resetLoading}
               >
-                <RefreshCw size={16} /> Wipe and Reset Database
+                <RefreshCw size={16} /> {resetLoading ? 'Resetting Database...' : 'Wipe and Reset Database'}
               </button>
             </div>
           </div>
@@ -1023,11 +1108,41 @@ export default function AdminDashboard() {
         {showProductModal && (
           <div className="modal-overlay" style={{ color: 'var(--color-text-dark)' }}>
             <div className="modal-content" style={{ maxWidth: '650px' }}>
-              <button className="modal-close" onClick={() => setShowProductModal(false)}>✕</button>
+              <button className="modal-close" onClick={() => setShowProductModal(false)} disabled={modalLoading}>✕</button>
               
               <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.5rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
                 {editingProductId ? 'Edit Product Details' : 'Create New Product Record'}
               </h3>
+
+              {modalError && (
+                <div style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  color: 'var(--color-danger)',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '8px',
+                  fontSize: '0.85rem',
+                  marginBottom: '1.5rem',
+                  fontWeight: 500
+                }}>
+                  ⚠️ {modalError}
+                </div>
+              )}
+
+              {modalSuccess && (
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  color: 'var(--color-success)',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '8px',
+                  fontSize: '0.85rem',
+                  marginBottom: '1.5rem',
+                  fontWeight: 600
+                }}>
+                  ✔ Product saved successfully!
+                </div>
+              )}
 
               <form onSubmit={handleProductSubmit}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem' }}>
@@ -1041,6 +1156,7 @@ export default function AdminDashboard() {
                       value={prodName} 
                       onChange={e => setProdName(e.target.value)} 
                       placeholder="e.g. Suction Hose"
+                      disabled={modalLoading}
                       required 
                     />
                   </div>
@@ -1054,6 +1170,7 @@ export default function AdminDashboard() {
                       value={prodCategory} 
                       onChange={e => setProdCategory(e.target.value)} 
                       placeholder="e.g. Suction, Braided, Rubber"
+                      disabled={modalLoading}
                       required 
                     />
                   </div>
@@ -1067,6 +1184,7 @@ export default function AdminDashboard() {
                       value={prodPrice} 
                       onChange={e => setProdPrice(e.target.value)} 
                       placeholder="e.g. 180"
+                      disabled={modalLoading}
                       required 
                     />
                   </div>
@@ -1078,6 +1196,7 @@ export default function AdminDashboard() {
                       className="form-control"
                       value={prodUnit}
                       onChange={e => setProdUnit(e.target.value)}
+                      disabled={modalLoading}
                       required
                     >
                       <option value="Meter">Meter</option>
@@ -1097,6 +1216,7 @@ export default function AdminDashboard() {
                     value={prodDesc} 
                     onChange={e => setProdDesc(e.target.value)} 
                     placeholder="Describe industrial strength, materials, applications..."
+                    disabled={modalLoading}
                     style={{ minHeight: '80px' }}
                   ></textarea>
                 </div>
@@ -1109,9 +1229,10 @@ export default function AdminDashboard() {
                       <input 
                         type="text" 
                         className="form-control" 
-                        value={prodImage} 
+                        value={prodImage && prodImage.startsWith('data:') ? 'Custom local file selected' : prodImage} 
                         onChange={e => setProdImage(e.target.value)} 
-                        placeholder="Paste image web URL or upload file below..." 
+                        placeholder="Paste image URL or upload file below..." 
+                        disabled={modalLoading}
                       />
                       
                       {/* Image File Uploader */}
@@ -1123,13 +1244,14 @@ export default function AdminDashboard() {
                           type="file" 
                           accept="image/*"
                           onChange={handleImageUpload}
+                          disabled={modalLoading}
                           style={{ fontSize: '0.75rem' }}
                         />
                       </div>
                     </div>
                     {prodImage && (
                       <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Image Preview</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Preview</div>
                         <img 
                           src={prodImage} 
                           alt="Thumbnail Preview" 
@@ -1145,7 +1267,7 @@ export default function AdminDashboard() {
                 <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--color-border)', paddingTop: '1.5rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                     <label style={{ fontWeight: 700, margin: 0 }}>Technical Specifications</label>
-                    <button type="button" onClick={addSpecField} className="btn btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
+                    <button type="button" onClick={addSpecField} className="btn btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} disabled={modalLoading}>
                       + Add Row
                     </button>
                   </div>
@@ -1159,6 +1281,7 @@ export default function AdminDashboard() {
                           placeholder="e.g. Temperature Range" 
                           value={spec.key}
                           onChange={(e) => handleSpecChange(index, 'key', e.target.value)}
+                          disabled={modalLoading}
                           style={{ flex: 1, padding: '0.5rem' }}
                         />
                         <input 
@@ -1167,6 +1290,7 @@ export default function AdminDashboard() {
                           placeholder="e.g. -10°C to +60°C" 
                           value={spec.val}
                           onChange={(e) => handleSpecChange(index, 'val', e.target.value)}
+                          disabled={modalLoading}
                           style={{ flex: 1, padding: '0.5rem' }}
                         />
                         <button 
@@ -1174,7 +1298,7 @@ export default function AdminDashboard() {
                           onClick={() => removeSpecField(index)} 
                           className="btn btn-danger" 
                           style={{ padding: '0.5rem', minWidth: '32px' }}
-                          disabled={prodSpecs.length === 1}
+                          disabled={prodSpecs.length === 1 || modalLoading}
                         >
                           ✕
                         </button>
@@ -1184,11 +1308,11 @@ export default function AdminDashboard() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '2.5rem', justifyContent: 'flex-end' }}>
-                  <button type="button" onClick={() => setShowProductModal(false)} className="btn btn-outline" style={{ padding: '0.6rem 1.25rem' }}>
+                  <button type="button" onClick={() => setShowProductModal(false)} className="btn btn-outline" style={{ padding: '0.6rem 1.25rem' }} disabled={modalLoading}>
                     Cancel
                   </button>
-                  <button type="submit" className="btn btn-primary" style={{ padding: '0.6rem 2rem' }}>
-                    {editingProductId ? 'Update Product' : 'Add to Catalog'}
+                  <button type="submit" className="btn btn-primary" style={{ padding: '0.6rem 2rem' }} disabled={modalLoading}>
+                    {modalLoading ? 'Saving to Database...' : (editingProductId ? 'Update Product' : 'Add to Catalog')}
                   </button>
                 </div>
               </form>

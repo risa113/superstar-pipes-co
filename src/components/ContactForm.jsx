@@ -10,6 +10,9 @@ export default function ContactForm({ prefilledProduct, clearPrefilledProduct })
   const [quantity, setQuantity] = useState('');
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Hook to handle pre-filled product when clicked from catalog
   useEffect(() => {
@@ -18,27 +21,33 @@ export default function ContactForm({ prefilledProduct, clearPrefilledProduct })
     }
   }, [prefilledProduct]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name || !phone || !product) {
       alert('Please fill out Name, Phone and select a Product.');
       return;
     }
 
+    setLoading(true);
+    setErrorMsg('');
+
     const inquiryData = {
       name,
       phone,
       product,
       quantity: quantity || 'Not specified',
-      message: message || 'Urgent inquiry.'
+      message: message || 'Urgent inquiry.',
+      date: new Date().toISOString(),
+      read: false
     };
 
-    // Save to Local Database (so Admin can review)
-    addInquiry(inquiryData);
+    try {
+      // Save to Cloud Database (so Admin can review)
+      await addInquiry(inquiryData);
 
-    // Build the WhatsApp formatted message
-    const waBaseUrl = `https://wa.me/${companyInfo.whatsapp.replace('+', '')}`;
-    const textMessage = `*NEW INQUIRY - SUPER STAR PIPES & CO*
+      // Build the WhatsApp formatted message
+      const waBaseUrl = `https://wa.me/${companyInfo.whatsapp.replace('+', '')}`;
+      const textMessage = `*NEW INQUIRY - SUPER STAR PIPES & CO*
 ---------------------------------------
 👤 *Client Name:* ${name}
 📞 *Phone:* ${phone}
@@ -48,24 +57,29 @@ export default function ContactForm({ prefilledProduct, clearPrefilledProduct })
 ---------------------------------------
 _Sent via Super Star Pipes web inquiry portal_`;
 
-    const encodedText = encodeURIComponent(textMessage);
-    const waRedirectUrl = `${waBaseUrl}?text=${encodedText}`;
+      const encodedText = encodeURIComponent(textMessage);
+      const waRedirectUrl = `${waBaseUrl}?text=${encodedText}`;
 
-    // Show success state
-    setSubmitted(true);
-    clearPrefilledProduct();
+      // Show success state
+      setSubmitted(true);
+      clearPrefilledProduct();
 
-    // Trigger WhatsApp Redirect after a short delay so the user sees the success state
-    setTimeout(() => {
-      window.open(waRedirectUrl, '_blank');
-      // Reset form fields
-      setName('');
-      setPhone('');
-      setProduct('');
-      setQuantity('');
-      setMessage('');
-      setSubmitted(false);
-    }, 2000);
+      // Trigger WhatsApp Redirect after a short delay so the user sees the success state
+      setTimeout(() => {
+        window.open(waRedirectUrl, '_blank');
+        // Reset form fields
+        setName('');
+        setPhone('');
+        setProduct('');
+        setQuantity('');
+        setMessage('');
+        setSubmitted(false);
+      }, 2000);
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to submit your inquiry. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -190,6 +204,21 @@ _Sent via Super Star Pipes web inquiry portal_`;
                   Fill out the form below. Our managers will log your request and contact you directly.
                 </p>
 
+                {errorMsg && (
+                  <div style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    color: 'var(--color-danger)',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    marginBottom: '1.5rem',
+                    fontWeight: 500
+                  }}>
+                    ⚠️ {errorMsg}
+                  </div>
+                )}
+
                 {/* Name Input */}
                 <div className="form-group">
                   <label htmlFor="name">Full Name <span style={{ color: 'var(--color-danger)' }}>*</span></label>
@@ -200,6 +229,7 @@ _Sent via Super Star Pipes web inquiry portal_`;
                     placeholder="e.g. Rajesh Kumar" 
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    disabled={loading}
                     required
                   />
                 </div>
@@ -214,6 +244,7 @@ _Sent via Super Star Pipes web inquiry portal_`;
                     placeholder="e.g. +91 9876543210" 
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    disabled={loading}
                     required
                   />
                 </div>
@@ -226,6 +257,7 @@ _Sent via Super Star Pipes web inquiry portal_`;
                     className="form-control"
                     value={product}
                     onChange={(e) => setProduct(e.target.value)}
+                    disabled={loading}
                     required
                   >
                     <option value="">-- Choose Hoses/Pipes --</option>
@@ -248,6 +280,7 @@ _Sent via Super Star Pipes web inquiry portal_`;
                     placeholder="e.g. 500 Meters, 100 Coils" 
                     value={quantity}
                     onChange={(e) => setQuantity(e.target.value)}
+                    disabled={loading}
                   />
                 </div>
 
@@ -260,11 +293,18 @@ _Sent via Super Star Pipes web inquiry portal_`;
                     placeholder="Describe specific diameters, color preferences, pressure requirements, or custom delivery address..." 
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
+                    disabled={loading}
                   ></textarea>
                 </div>
 
-                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem', padding: '0.9rem' }}>
-                  <Send size={18} /> Submit &amp; Reply on WhatsApp
+                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem', padding: '0.9rem' }} disabled={loading}>
+                  {loading ? (
+                    <>Sending Inquiry...</>
+                  ) : (
+                    <>
+                      <Send size={18} /> Submit &amp; Reply on WhatsApp
+                    </>
+                  )}
                 </button>
               </form>
             )}
