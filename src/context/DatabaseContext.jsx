@@ -472,15 +472,25 @@ export const DatabaseProvider = ({ children }) => {
     setLoading(true);
     try {
       if (useCloudDb) {
-        // Authenticate via Supabase Auth
-        // Using standard admin email mapped to passcode input
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: 'mohamedthariq113@gmail.com',
-          password: password
-        });
-        if (error) throw error;
-        setIsLoggedIn(true);
-        return true;
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: 'mohamedthariq113@gmail.com',
+            password: password
+          });
+          if (error) throw error;
+          setIsLoggedIn(true);
+          return true;
+        } catch (authErr) {
+          // If Supabase Auth fails (e.g., user not created yet in Supabase console),
+          // fallback to local passcode check so the user is never locked out of their panel
+          const localPass = localStorage.getItem('ss_admin_pass') || 'superstar@123';
+          if (password === localPass) {
+            console.warn('Supabase Auth failed, logging in via local passcode fallback.');
+            setIsLoggedIn(true);
+            return true;
+          }
+          throw authErr;
+        }
       } else {
         // Local passcode authentication fallback
         const localPass = localStorage.getItem('ss_admin_pass') || 'superstar@123';
