@@ -471,7 +471,7 @@ export const DatabaseProvider = ({ children }) => {
         // Authenticate via Supabase Auth
         // Using standard admin email mapped to passcode input
         const { data, error } = await supabase.auth.signInWithPassword({
-          email: 'admin@superstarpipes.com',
+          email: 'superstarpipesandco@gmail.com',
           password: password
         });
         if (error) throw error;
@@ -479,7 +479,7 @@ export const DatabaseProvider = ({ children }) => {
         return true;
       } else {
         // Local passcode authentication fallback
-        const localPass = localStorage.getItem('ss_admin_pass') || 'superstar123';
+        const localPass = localStorage.getItem('ss_admin_pass') || 'superstar@123';
         if (password === localPass) {
           setIsLoggedIn(true);
           localStorage.setItem('ss_local_auth', 'true');
