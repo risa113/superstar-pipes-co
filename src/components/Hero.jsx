@@ -169,18 +169,18 @@ export default function Hero() {
               maxWidth: '450px',
               height: '350px',
               padding: '2.5rem',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid rgba(56, 189, 248, 0.18)',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
-              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)'
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7), 0 0 60px rgba(2, 132, 199, 0.08)'
             }}>
               <div>
-                <Factory size={40} style={{ color: 'var(--color-secondary)', marginBottom: '1.5rem' }} />
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem', color: 'white' }}>
+                <Factory size={40} style={{ color: 'var(--color-secondary)', marginBottom: '1.5rem', filter: 'drop-shadow(0 0 8px rgba(56,189,248,0.4))' }} />
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.75rem', color: '#ffffff', letterSpacing: '-0.02em', textShadow: '0 1px 8px rgba(0,0,0,0.4)' }}>
                   Industrial Strength Hoses
                 </h3>
-                <p style={{ color: '#94a3b8', fontSize: '0.95rem' }}>
+                <p style={{ color: '#cbd5e1', fontSize: '0.95rem', lineHeight: '1.65', fontWeight: 400 }}>
                   Specially formulated pipelines for conveying abrasive slurries, high pressure gases, industrial raw materials, and water resources under high stress.
                 </p>
               </div>
@@ -190,13 +190,14 @@ export default function Hero() {
                 alignItems: 'center',
                 gap: '0.75rem',
                 fontSize: '0.85rem',
-                color: 'white',
-                background: 'rgba(255,255,255,0.05)',
+                color: '#e2e8f0',
+                background: 'rgba(56, 189, 248, 0.08)',
                 padding: '0.75rem 1rem',
                 borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.05)'
+                border: '1px solid rgba(56, 189, 248, 0.15)',
+                fontWeight: 500
               }}>
-                <ShieldCheck size={18} style={{ color: 'var(--color-success)' }} />
+                <ShieldCheck size={18} style={{ color: 'var(--color-success)', flexShrink: 0 }} />
                 ISO Standards &amp; Heavy-Duty Structural Rating
               </div>
             </div>
