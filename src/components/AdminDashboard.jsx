@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Lock, LayoutDashboard, Package, Inbox, Edit3, Settings, LogOut, 
   Plus, Edit, Trash2, Check, RefreshCw, Download, Upload, Eye, EyeOff, MessageSquare
@@ -61,6 +61,21 @@ export default function AdminDashboard() {
   
   const [resetLoading, setResetLoading] = useState(false);
   const [inquiryActionId, setInquiryActionId] = useState(null); // tracking row loading
+
+  // Sync company form fields whenever companyInfo is refreshed from the database
+  useEffect(() => {
+    setCompName(companyInfo.name || '');
+    setCompTagline(companyInfo.tagline || '');
+    setCompPartner(companyInfo.partner || '');
+    setCompAddress(companyInfo.address || '');
+    setCompGstin(companyInfo.gstin || '');
+    setCompPhone(companyInfo.phone || '');
+    setCompWhatsapp(companyInfo.whatsapp || '');
+    setCompEmail(companyInfo.email || '');
+    setCompAboutText(companyInfo.aboutText || '');
+    setCompMapEmbed(companyInfo.mapEmbedUrl || '');
+    setCompMapShare(companyInfo.mapShareLink || '');
+  }, [companyInfo]);
 
   // Handlers
   const handleLogin = async (e) => {

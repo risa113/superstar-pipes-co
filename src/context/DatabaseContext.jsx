@@ -441,6 +441,7 @@ export const DatabaseProvider = ({ children }) => {
     try {
       if (useCloudDb) {
         const mappedInfo = {
+          id: 1, // required for upsert to match the single row
           name: updatedInfo.name,
           tagline: updatedInfo.tagline,
           partner: updatedInfo.partner,
@@ -453,13 +454,15 @@ export const DatabaseProvider = ({ children }) => {
           map_share_link: updatedInfo.mapShareLink,
           map_embed_url: updatedInfo.mapEmbedUrl
         };
+        // upsert works even if the row doesn't exist yet
         const { error } = await supabase
           .from('company_info')
-          .update(mappedInfo)
-          .eq('id', 1);
+          .upsert(mappedInfo, { onConflict: 'id' });
         if (error) throw error;
-      } else {
-        setCompanyInfo(prev => ({ ...prev, ...updatedInfo }));
+      }
+      // Always update local state so UI reflects the change instantly
+      setCompanyInfo(prev => ({ ...prev, ...updatedInfo }));
+      if (!useCloudDb) {
         localStorage.setItem('ss_company_info', JSON.stringify({ ...companyInfo, ...updatedInfo }));
       }
     } finally {
